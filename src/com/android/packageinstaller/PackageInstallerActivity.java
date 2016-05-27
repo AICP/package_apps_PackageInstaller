@@ -49,6 +49,7 @@ import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.widget.AppSecurityPermissions;
 import android.widget.Button;
+import android.widget.GridLayout;
 import android.widget.TabHost;
 import android.widget.TextView;
 
@@ -135,6 +136,8 @@ public class PackageInstallerActivity extends Activity implements OnCancelListen
         mScrollView = null;
         mOkCanInstall = false;
         int msg = 0;
+        LayoutInflater inflater = (LayoutInflater)getSystemService(
+                Context.LAYOUT_INFLATER_SERVICE);
 
         AppSecurityPermissions perms = new AppSecurityPermissions(this, mPkgInfo);
         final int N = perms.getPermissionCount(AppSecurityPermissions.WHICH_ALL);
@@ -156,50 +159,71 @@ public class PackageInstallerActivity extends Activity implements OnCancelListen
                 }
             }
             if (!supportsRuntimePermissions && !newPermissionsFound) {
-                LayoutInflater inflater = (LayoutInflater)getSystemService(
-                        Context.LAYOUT_INFLATER_SERVICE);
                 TextView label = (TextView)inflater.inflate(R.layout.label, null);
                 label.setText(R.string.no_new_perms);
                 mScrollView.addView(label);
             }
             adapter.addTab(tabHost.newTabSpec(TAB_ID_NEW).setIndicator(
                     getText(R.string.newPerms)), mScrollView);
-        } else  {
-            findViewById(R.id.tabscontainer).setVisibility(View.GONE);
-            findViewById(R.id.divider).setVisibility(View.VISIBLE);
         }
         if (!supportsRuntimePermissions && N > 0) {
             permVisible = true;
-            LayoutInflater inflater = (LayoutInflater)getSystemService(
-                    Context.LAYOUT_INFLATER_SERVICE);
             View root = inflater.inflate(R.layout.permissions_list, null);
             if (mScrollView == null) {
                 mScrollView = (CaffeinatedScrollView)root.findViewById(R.id.scrollview);
             }
             ((ViewGroup)root.findViewById(R.id.permission_list)).addView(
-                        perms.getPermissionsView(AppSecurityPermissions.WHICH_ALL));
+                    perms.getPermissionsView(AppSecurityPermissions.WHICH_ALL));
             adapter.addTab(tabHost.newTabSpec(TAB_ID_ALL).setIndicator(
                     getText(R.string.allPerms)), root);
         }
         mInstallFlowAnalytics.setPermissionsDisplayed(permVisible);
-        if (!permVisible) {
-            if (mAppInfo != null) {
-                // This is an update to an application, but there are no
-                // permissions at all.
-                msg = (mAppInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0
-                        ? R.string.install_confirm_question_update_system_no_perms
-                        : R.string.install_confirm_question_update_no_perms;
-            } else {
-                // This is a new application with no permissions.
-                msg = R.string.install_confirm_question_no_perms;
+        GridLayout layoutVersion = (GridLayout)inflater.inflate(R.layout.app_version, null);
+        ((TextView)layoutVersion.findViewById(R.id.app_new_version)).setText(mPkgInfo.versionName);
+        if (mAppInfo != null) {
+            PackageInfo pkgCurrent = null;
+            try {
+                pkgCurrent = mPm.getPackageInfo(mAppInfo.packageName, PackageManager.GET_UNINSTALLED_PACKAGES);
+                if (pkgCurrent == null) {
+                    ((TextView)layoutVersion.findViewById(R.id.app_current_version)).setText(R.string.not_available);
+                }
+                else
+                {
+                    ((TextView)layoutVersion.findViewById(R.id.app_current_version)).setText(pkgCurrent.versionName);
+                }
             }
-            tabHost.setVisibility(View.GONE);
-            mInstallFlowAnalytics.setAllPermissionsDisplayed(false);
-            mInstallFlowAnalytics.setNewPermissionsDisplayed(false);
-            findViewById(R.id.filler).setVisibility(View.VISIBLE);
-            findViewById(R.id.divider).setVisibility(View.GONE);
-            mScrollView = null;
+            catch (PackageManager.NameNotFoundException ex) {
+                ((TextView)layoutVersion.findViewById(R.id.app_current_version)).setText(R.string.not_available);
+            }
         }
+        else {
+            ((TextView)layoutVersion.findViewById(R.id.app_current_version)).setText(R.string.not_available);
+        }
+        mScrollView = new CaffeinatedScrollView(this);
+        mScrollView.setFillViewport(true);
+        TextView label = (TextView)inflater.inflate(R.layout.label, null);
+        label.setText(R.string.no_perms);
+        mScrollView.addView(label);
+        adapter.addTab(tabHost.newTabSpec("all").setIndicator(
+                getText(R.string.allPerms)), mScrollView);
+
+        mScrollView = new CaffeinatedScrollView(this);
+        mScrollView.setFillViewport(true);
+        if (mAppInfo != null) {
+            // This is an update to an application, but there are no
+            // permissions at all.
+            msg = (mAppInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0
+                    ? R.string.install_confirm_question_update_system_no_perms
+                    : R.string.install_confirm_question_update_no_perms;
+        } else {
+            // This is a new application with no permissions.
+            msg = R.string.install_confirm_question_no_perms;
+        }
+        mInstallFlowAnalytics.setAllPermissionsDisplayed(false);
+        mInstallFlowAnalytics.setNewPermissionsDisplayed(false);
+        mScrollView.addView(layoutVersion);
+        adapter.addTab(tabHost.newTabSpec("version").setIndicator(
+                getText(R.string.appVersion)), mScrollView);
         if (msg != 0) {
             ((TextView)findViewById(R.id.install_confirm_question)).setText(msg);
         }
@@ -233,122 +257,122 @@ public class PackageInstallerActivity extends Activity implements OnCancelListen
     @Override
     public Dialog onCreateDialog(int id, Bundle bundle) {
         switch (id) {
-        case DLG_UNKNOWN_SOURCES:
-            return new AlertDialog.Builder(this)
-                    .setTitle(R.string.unknown_apps_dlg_title)
-                    .setMessage(R.string.unknown_apps_dlg_text)
-                    .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            Log.i(TAG, "Finishing off activity so that user can navigate to settings manually");
-                            finish();
-                        }})
-                    .setPositiveButton(R.string.settings, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            Log.i(TAG, "Launching settings");
-                            launchSettingsAppAndFinish();
-                        }
-                    })
-                    .setOnCancelListener(this)
-                    .create();
-        case DLG_ADMIN_RESTRICTS_UNKNOWN_SOURCES:
-            return new AlertDialog.Builder(this)
-                    .setTitle(R.string.unknown_apps_dlg_title)
-                    .setMessage(R.string.unknown_apps_admin_dlg_text)
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            finish();
-                        }
-                    })
-                    .setOnCancelListener(this)
-                    .create();
-        case DLG_PACKAGE_ERROR :
-            return new AlertDialog.Builder(this)
-                    .setTitle(R.string.Parse_error_dlg_title)
-                    .setMessage(R.string.Parse_error_dlg_text)
-                    .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            finish();
-                        }
-                    })
-                    .setOnCancelListener(this)
-                    .create();
-        case DLG_OUT_OF_SPACE:
-            // Guaranteed not to be null. will default to package name if not set by app
-            CharSequence appTitle = mPm.getApplicationLabel(mPkgInfo.applicationInfo);
-            String dlgText = getString(R.string.out_of_space_dlg_text,
-                    appTitle.toString());
-            return new AlertDialog.Builder(this)
-                    .setTitle(R.string.out_of_space_dlg_title)
-                    .setMessage(dlgText)
-                    .setPositiveButton(R.string.manage_applications, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            //launch manage applications
-                            Intent intent = new Intent("android.intent.action.MANAGE_PACKAGE_STORAGE");
-                            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                            startActivity(intent);
-                            finish();
-                        }
-                    })
-                    .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            Log.i(TAG, "Canceling installation");
-                            finish();
-                        }
-                })
-                  .setOnCancelListener(this)
-                  .create();
-        case DLG_INSTALL_ERROR :
-            // Guaranteed not to be null. will default to package name if not set by app
-            CharSequence appTitle1 = mPm.getApplicationLabel(mPkgInfo.applicationInfo);
-            String dlgText1 = getString(R.string.install_failed_msg,
-                    appTitle1.toString());
-            return new AlertDialog.Builder(this)
-                    .setTitle(R.string.install_failed)
-                    .setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            finish();
-                        }
-                    })
-                    .setMessage(dlgText1)
-                    .setOnCancelListener(this)
-                    .create();
-        case DLG_ALLOW_SOURCE:
-            CharSequence appTitle2 = mPm.getApplicationLabel(mSourceInfo);
-            String dlgText2 = getString(R.string.allow_source_dlg_text,
-                    appTitle2.toString());
-            return new AlertDialog.Builder(this)
-                    .setTitle(R.string.allow_source_dlg_title)
-                    .setMessage(dlgText2)
-                    .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            setResult(RESULT_CANCELED);
-                            finish();
-                        }})
-                    .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            SharedPreferences prefs = getSharedPreferences(PREFS_ALLOWED_SOURCES,
-                                    Context.MODE_PRIVATE);
-                            prefs.edit().putBoolean(mSourceInfo.packageName, true).apply();
-                            startInstallConfirm();
-                        }
-                    })
-                    .setOnCancelListener(this)
-                    .create();
-        case DLG_NOT_SUPPORTED_ON_WEAR:
-            return new AlertDialog.Builder(this)
-                    .setTitle(R.string.wear_not_allowed_dlg_title)
-                    .setMessage(R.string.wear_not_allowed_dlg_text)
-                    .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            setResult(RESULT_OK);
-                            finish();
-                        }
-                    })
-                    .setOnCancelListener(this)
-                    .create();
-       }
-       return null;
-   }
+            case DLG_UNKNOWN_SOURCES:
+                return new AlertDialog.Builder(this)
+                        .setTitle(R.string.unknown_apps_dlg_title)
+                        .setMessage(R.string.unknown_apps_dlg_text)
+                        .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                Log.i(TAG, "Finishing off activity so that user can navigate to settings manually");
+                                finish();
+                            }})
+                        .setPositiveButton(R.string.settings, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                Log.i(TAG, "Launching settings");
+                                launchSettingsAppAndFinish();
+                            }
+                        })
+                        .setOnCancelListener(this)
+                        .create();
+            case DLG_ADMIN_RESTRICTS_UNKNOWN_SOURCES:
+                return new AlertDialog.Builder(this)
+                        .setTitle(R.string.unknown_apps_dlg_title)
+                        .setMessage(R.string.unknown_apps_admin_dlg_text)
+                        .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                finish();
+                            }
+                        })
+                        .setOnCancelListener(this)
+                        .create();
+            case DLG_PACKAGE_ERROR :
+                return new AlertDialog.Builder(this)
+                        .setTitle(R.string.Parse_error_dlg_title)
+                        .setMessage(R.string.Parse_error_dlg_text)
+                        .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                finish();
+                            }
+                        })
+                        .setOnCancelListener(this)
+                        .create();
+            case DLG_OUT_OF_SPACE:
+                // Guaranteed not to be null. will default to package name if not set by app
+                CharSequence appTitle = mPm.getApplicationLabel(mPkgInfo.applicationInfo);
+                String dlgText = getString(R.string.out_of_space_dlg_text,
+                        appTitle.toString());
+                return new AlertDialog.Builder(this)
+                        .setTitle(R.string.out_of_space_dlg_title)
+                        .setMessage(dlgText)
+                        .setPositiveButton(R.string.manage_applications, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                //launch manage applications
+                                Intent intent = new Intent("android.intent.action.MANAGE_PACKAGE_STORAGE");
+                                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                                finish();
+                            }
+                        })
+                        .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                Log.i(TAG, "Canceling installation");
+                                finish();
+                            }
+                        })
+                        .setOnCancelListener(this)
+                        .create();
+            case DLG_INSTALL_ERROR :
+                // Guaranteed not to be null. will default to package name if not set by app
+                CharSequence appTitle1 = mPm.getApplicationLabel(mPkgInfo.applicationInfo);
+                String dlgText1 = getString(R.string.install_failed_msg,
+                        appTitle1.toString());
+                return new AlertDialog.Builder(this)
+                        .setTitle(R.string.install_failed)
+                        .setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                finish();
+                            }
+                        })
+                        .setMessage(dlgText1)
+                        .setOnCancelListener(this)
+                        .create();
+            case DLG_ALLOW_SOURCE:
+                CharSequence appTitle2 = mPm.getApplicationLabel(mSourceInfo);
+                String dlgText2 = getString(R.string.allow_source_dlg_text,
+                        appTitle2.toString());
+                return new AlertDialog.Builder(this)
+                        .setTitle(R.string.allow_source_dlg_title)
+                        .setMessage(dlgText2)
+                        .setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                setResult(RESULT_CANCELED);
+                                finish();
+                            }})
+                        .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                SharedPreferences prefs = getSharedPreferences(PREFS_ALLOWED_SOURCES,
+                                        Context.MODE_PRIVATE);
+                                prefs.edit().putBoolean(mSourceInfo.packageName, true).apply();
+                                startInstallConfirm();
+                            }
+                        })
+                        .setOnCancelListener(this)
+                        .create();
+            case DLG_NOT_SUPPORTED_ON_WEAR:
+                return new AlertDialog.Builder(this)
+                        .setTitle(R.string.wear_not_allowed_dlg_title)
+                        .setMessage(R.string.wear_not_allowed_dlg_text)
+                        .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                setResult(RESULT_OK);
+                                finish();
+                            }
+                        })
+                        .setOnCancelListener(this)
+                        .create();
+        }
+        return null;
+    }
 
     private void launchSettingsAppAndFinish() {
         // Create an intent to launch SettingsTwo activity
