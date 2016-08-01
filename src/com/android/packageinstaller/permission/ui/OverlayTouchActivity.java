@@ -17,11 +17,21 @@ package com.android.packageinstaller.permission.ui;
 
 import android.app.Activity;
 import android.app.AppOpsManager;
+import android.content.ContentResolver;
 import android.os.Binder;
 import android.os.IBinder;
+import android.provider.Settings;
+import android.util.Log;
+import android.view.MotionEvent;
 
 public class OverlayTouchActivity extends Activity {
     private final IBinder mToken = new Binder();
+
+    private boolean mObscuredTouch;
+
+    public boolean isObscuredTouch() {
+        return mObscuredTouch;
+    }
 
     @Override
     protected void onResume() {
@@ -33,6 +43,18 @@ public class OverlayTouchActivity extends Activity {
     protected void onPause() {
         super.onPause();
         setOverlayAllowed(true);
+    }
+
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        final boolean overlayCheckDisabled = Settings.Secure.getInt(getContentResolver(),
+                Settings.Secure.PACKAGE_INSTALL_OVERLAY_CHECK_DISABLED, 0) != 0;
+        if (overlayCheckDisabled) {
+            mObscuredTouch = false;
+        } else {
+            mObscuredTouch = (event.getFlags() & (MotionEvent.FLAG_WINDOW_IS_OBSCURED
+                | MotionEvent.FLAG_WINDOW_IS_PARTIALLY_OBSCURED)) != 0;
+        }
+        return super.dispatchTouchEvent(event);
     }
 
     private void setOverlayAllowed(boolean allowed) {
