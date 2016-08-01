@@ -17,8 +17,10 @@ package com.android.packageinstaller.permission.ui;
 
 import android.app.Activity;
 import android.app.AppOpsManager;
+import android.content.ContentResolver;
 import android.os.Binder;
 import android.os.IBinder;
+import android.provider.Settings;
 
 public class OverlayTouchActivity extends Activity {
     private final IBinder mToken = new Binder();
@@ -26,13 +28,15 @@ public class OverlayTouchActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        setOverlayAllowed(false);
+        setOverlayAllowed(Settings.Secure.getInt(getContentResolver(),
+                Settings.Secure.PACKAGE_INSTALL_OVERLAY_CHECK_DISABLED, 0) != 0);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        setOverlayAllowed(true);
+        setOverlayAllowed(Settings.Secure.getInt(getContentResolver(),
+                Settings.Secure.PACKAGE_INSTALL_OVERLAY_CHECK_DISABLED, 0) == 0);
     }
 
     private void setOverlayAllowed(boolean allowed) {
