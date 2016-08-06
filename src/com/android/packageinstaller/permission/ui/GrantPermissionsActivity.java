@@ -241,11 +241,11 @@ public class GrantPermissionsActivity extends OverlayTouchActivity
 
     @Override
     public void onPermissionGrantResult(String name, boolean granted, boolean doNotAskAgain) {
-        if (isObscuredTouch()) {
+        /*if (isObscuredTouch()) {
             showOverlayDialog();
             finish();
             return;
-        }
+        }*/
         GroupState groupState = mRequestGrantPermissionGroups.get(name);
         if (groupState.mGroup != null) {
             if (granted) {

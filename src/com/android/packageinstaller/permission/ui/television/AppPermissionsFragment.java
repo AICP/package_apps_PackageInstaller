@@ -270,10 +270,10 @@ public final class AppPermissionsFragment extends SettingsWithHeader
         }
 
         OverlayTouchActivity activity = (OverlayTouchActivity) getActivity();
-        if (activity.isObscuredTouch()) {
+        /*if (activity.isObscuredTouch()) {
             activity.showOverlayDialog();
             return false;
-        }
+        }*/
 
         addToggledGroup(group);
 

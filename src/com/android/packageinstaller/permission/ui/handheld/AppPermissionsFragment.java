@@ -269,15 +269,15 @@ public final class AppPermissionsFragment extends SettingsWithHeader
         String groupName = preference.getKey();
         final AppPermissionGroup group = mAppPermissions.getPermissionGroup(groupName);
 
-        if (group == null) {
+        /*if (group == null) {
             return false;
-        }
+        }*/
 
         OverlayTouchActivity activity = (OverlayTouchActivity) getActivity();
-        if (activity.isObscuredTouch()) {
+        /*if (activity.isObscuredTouch()) {
             activity.showOverlayDialog();
             return false;
-        }
+        }*/
 
         addToggledGroup(group);
 

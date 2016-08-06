@@ -314,15 +314,15 @@ public final class PermissionAppsFragment extends PermissionsFrameFragment imple
         String pkg = preference.getKey();
         final PermissionApp app = mPermissionApps.getApp(pkg);
 
-        if (app == null) {
+        /*if (app == null) {
             return false;
-        }
+        }*/
 
         OverlayTouchActivity activity = (OverlayTouchActivity) getActivity();
-        if (activity.isObscuredTouch()) {
+        /*if (activity.isObscuredTouch()) {
             activity.showOverlayDialog();
             return false;
-        }
+        }*/
 
         addToggledGroup(app.getPackageName(), app.getPermissionGroup());
 

@@ -94,7 +94,7 @@ public class PackageInstallerActivity extends Activity implements OnCancelListen
     private Button mOk;
     private Button mCancel;
     CaffeinatedScrollView mScrollView = null;
-    private boolean mOkCanInstall = false;
+    private boolean mOkCanInstall = true;
 
     static final String PREFS_ALLOWED_SOURCES = "allowed_sources";
 
@@ -134,7 +134,7 @@ public class PackageInstallerActivity extends Activity implements OnCancelListen
                 >= Build.VERSION_CODES.M;
         boolean permVisible = false;
         mScrollView = null;
-        mOkCanInstall = false;
+        mOkCanInstall = true;
         int msg = 0;
         LayoutInflater inflater = (LayoutInflater)getSystemService(
                 Context.LAYOUT_INFLATER_SERVICE);
@@ -578,7 +578,7 @@ public class PackageInstallerActivity extends Activity implements OnCancelListen
         //set view
         setContentView(R.layout.install_start);
         mInstallConfirm = findViewById(R.id.install_confirm_panel);
-        mInstallConfirm.setVisibility(View.INVISIBLE);
+        mInstallConfirm.setVisibility(View.VISIBLE);
         PackageUtil.initSnippetForNewApp(this, as, R.id.app_snippet);
 
         mOriginatingUid = getOriginatingUid(intent);
@@ -696,6 +696,7 @@ public class PackageInstallerActivity extends Activity implements OnCancelListen
 
     public void onClick(View v) {
         if (v == mOk) {
+            startInstall();
             if (mOkCanInstall || mScrollView == null) {
                 mInstallFlowAnalytics.setInstallButtonClicked();
                 if (mSessionId != -1) {

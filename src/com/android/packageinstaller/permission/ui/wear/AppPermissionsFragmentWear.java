@@ -198,10 +198,10 @@ public final class AppPermissionsFragmentWear extends TitledSettingsFragment {
         }
 
         OverlayTouchActivity activity = (OverlayTouchActivity) getActivity();
-        if (activity.isObscuredTouch()) {
+        /*if (activity.isObscuredTouch()) {
             activity.showOverlayDialog();
             return;
-        }
+        }*/
 
         addToggledGroup(group);
 
