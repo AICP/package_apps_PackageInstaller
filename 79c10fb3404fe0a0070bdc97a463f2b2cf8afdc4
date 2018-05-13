@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "871e2423_b648e247",
+        "filename": "res/values-in/strings.xml",
+        "patchSetId": 1
+      },
+      "lineNbr": 245,
+      "author": {
+        "id": 842
+      },
+      "writtenOn": "2018-05-13T16:22:25Z",
+      "side": 1,
+      "message": "Quotes...\npackages/apps/PackageInstaller/res/values-in/strings.xml:245: error: Error parsing XML: not well-formed (invalid token)",
+      "revId": "79c10fb3404fe0a0070bdc97a463f2b2cf8afdc4",
+      "serverId": "9f904cbb-a964-4fab-a7dc-5cfc4d5c238b",
+      "unresolved": true
+    }
+  ]
+}
